@@ -4,6 +4,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>우리 가계부</title>
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="우리 가계부" />
+<meta name="theme-color" content="#ffffff" />
+<link rel="manifest" href="manifest.json" />
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
 <style>
   :root {
@@ -70,7 +75,7 @@
     transition: border-color 0.15s;
   }
   input[type=number]:focus, input[type=text]:focus { border-color: var(--text); }
-  #amount-input { padding: 10px 10px 10px 26px; font-size: 20px; font-weight: 700; }
+  #amount-input { padding: 10px 10px 10px 26px; font-size: 20px; font-weight: 700; ime-mode: disabled; }
   #memo-input { padding: 9px 12px; font-size: 14px; margin-top: 8px; }
   #memo-input::placeholder, #amount-input::placeholder { color: var(--text-hint); font-weight: 400; }
   .add-btn { padding: 10px 18px; background: var(--text); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity 0.15s; white-space: nowrap; }
@@ -100,7 +105,7 @@
   .bar-track { flex: 1; background: var(--bg); border-radius: 4px; height: 18px; overflow: hidden; }
   .bar-fill { height: 100%; border-radius: 4px; background: var(--text); transition: width 0.4s cubic-bezier(.4,0,.2,1); }
   .bar-val { font-size: 11px; color: var(--text-sub); width: 72px; text-align: right; flex-shrink: 0; }
-  .who-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .who-grid { display: none; }
   .who-stat { border-radius: var(--radius-sm); padding: 14px; text-align: center; }
   .who-stat.husband { background: var(--husband-bg); }
   .who-stat.wife { background: var(--wife-bg); }
@@ -162,7 +167,7 @@
         <div class="input-row">
           <div class="amount-wrap">
             <span class="won-sign">₩</span>
-            <input type="number" id="amount-input" placeholder="0" inputmode="numeric" />
+            <input type="text" id="amount-input" placeholder="0" inputmode="numeric" />
           </div>
           <button class="add-btn" onclick="addEntry()">기록</button>
         </div>
@@ -256,7 +261,8 @@ window.changeMonth = function(dir) {
 }
 
 window.addEntry = async function() {
-  const a = parseInt(document.getElementById('amount-input').value, 10);
+  const raw = document.getElementById('amount-input').value.replace(/,/g, '');
+  const a = parseInt(raw, 10);
   if (!a || a <= 0) { document.getElementById('amount-input').focus(); return; }
   const memo = document.getElementById('memo-input').value.trim();
   try {
@@ -348,23 +354,6 @@ function renderChart() {
     `;
     barsEl.appendChild(row);
   });
-
-  const whoMap = { '남편': 0, '와이프': 0 };
-  me.forEach(e => { if (whoMap[e.who] !== undefined) whoMap[e.who] += e.amount; });
-  const totalAll = whoMap['남편'] + whoMap['와이프'] || 1;
-  const whoEl = document.getElementById('who-grid');
-  whoEl.innerHTML = '';
-  [['남편','husband'], ['와이프','wife']].forEach(([name, cls]) => {
-    const pct = Math.round(whoMap[name] / totalAll * 100);
-    const div = document.createElement('div');
-    div.className = 'who-stat ' + cls;
-    div.innerHTML = `
-      <div class="who-stat-name">${name === '남편' ? '👨 남편' : '👩 와이프'}</div>
-      <div class="who-stat-amt">${fmt(whoMap[name])}</div>
-      <div class="who-stat-pct">${pct}%</div>
-    `;
-    whoEl.appendChild(div);
-  });
 }
 
 // realtime listener
@@ -385,6 +374,13 @@ onSnapshot(q, (snapshot) => {
   document.getElementById('loading').innerHTML = '❌ 연결 실패<br><small>' + err.message + '</small>';
 });
 
+document.getElementById('amount-input').addEventListener('input', function() {
+  const pos = this.selectionStart;
+  const raw = this.value.replace(/,/g, '').replace(/[^0-9]/g, '');
+  if (!raw) { this.value = ''; return; }
+  const formatted = parseInt(raw, 10).toLocaleString('ko-KR');
+  this.value = formatted;
+});
 document.getElementById('amount-input').addEventListener('keydown', e => { if (e.key === 'Enter') window.addEntry(); });
 </script>
 </body>
