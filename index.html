@@ -172,6 +172,7 @@
           <button class="add-btn" onclick="addEntry()">기록</button>
         </div>
         <input type="text" id="memo-input" placeholder="어디서 뭘 샀나요? (선택)" maxlength="40" />
+        <input type="date" id="date-input" />
       </div>
       <div class="list-panel" id="list-section">
         <div class="empty-state" id="empty-state">아직 기록이 없어요 😊<br>첫 소비를 기록해보세요!</div>
@@ -262,11 +263,27 @@ window.addEntry = async function() {
   const a = parseInt(raw, 10);
   if (!a || a <= 0) { document.getElementById('amount-input').focus(); return; }
   const memo = document.getElementById('memo-input').value.trim();
+  const dateVal = document.getElementById('date-input').value;
+  let ts;
+  if (dateVal) {
+    const [y, m, d] = dateVal.split('-').map(Number);
+    const now = new Date();
+    ts = new Date(y, m-1, d, now.getHours(), now.getMinutes(), now.getSeconds()).getTime();
+  } else {
+    ts = Date.now();
+  }
   try {
-    await addDoc(collection(db, 'entries'), { amount: a, memo, ts: Date.now(), who: currentUser });
+    await addDoc(collection(db, 'entries'), { amount: a, memo, ts, who: currentUser });
     document.getElementById('amount-input').value = '';
     document.getElementById('memo-input').value = '';
+    // 날짜는 오늘로 리셋
+    document.getElementById('date-input').value = getTodayStr();
   } catch(e) { alert('저장 실패: ' + e.message); }
+}
+
+function getTodayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
 window.deleteEntry = async function(id) {
@@ -372,13 +389,13 @@ onSnapshot(q, (snapshot) => {
 });
 
 document.getElementById('amount-input').addEventListener('input', function() {
-  const pos = this.selectionStart;
   const raw = this.value.replace(/,/g, '').replace(/[^0-9]/g, '');
   if (!raw) { this.value = ''; return; }
   const formatted = parseInt(raw, 10).toLocaleString('ko-KR');
   this.value = formatted;
 });
 document.getElementById('amount-input').addEventListener('keydown', e => { if (e.key === 'Enter') window.addEntry(); });
+document.getElementById('date-input').value = getTodayStr();
 </script>
 </body>
 </html>
